@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙人輪替教練計時器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', "Microsoft JhengHei", sans-serif; }
+        .progress-segment { transition: all 0.3s ease; }
+        .timer-glow { text-shadow: 0 0 15px rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- 設定畫面 -->
+    <div id="setup-screen" class="w-full max-w-md bg-slate-800 p-8 rounded-3xl shadow-2xl space-y-6">
+        <h1 class="text-3xl font-black text-center text-blue-400 mb-6">訓練參數設定</h1>
+        
+        <div class="space-y-4">
+            <!-- 第 1 排：動作項目 -->
+            <div class="grid grid-cols-12 items-center gap-3">
+                <label class="col-span-5 text-right text-sm font-semibold text-slate-400">動作項目 (Rounds)</label>
+                <div class="col-span-7">
+                    <input type="number" id="input-rounds" value="5" class="w-full bg-slate-700 border-none rounded-xl p-3 text-xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <!-- 第 2 排：單人循環 -->
+            <div class="grid grid-cols-12 items-center gap-3">
+                <label class="col-span-5 text-right text-sm font-semibold text-slate-400">單人循環 (Sets)</label>
+                <div class="col-span-7">
+                    <input type="number" id="input-sets" value="2" class="w-full bg-slate-700 border-none rounded-xl p-3 text-xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <!-- 第 3 排：運動時間 -->
+            <div class="grid grid-cols-12 items-center gap-3">
+                <label class="col-span-5 text-right text-sm font-semibold text-slate-400">運動時間 (秒)</label>
+                <div class="col-span-7">
+                    <input type="number" id="input-work" value="40" class="w-full bg-slate-700 border-none rounded-xl p-3 text-xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+        </div>
+
+        <button onclick="startApp()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl text-xl shadow-lg mt-4 transition-all active:scale-95">
+            開始訓練
+        </button>
+    </div>
+
+    <!-- 計時畫面 -->
+    <div id="timer-screen" class="hidden w-full h-screen flex flex-col items-center justify-between py-10 px-6 fixed inset-0">
+        
+        <!-- 上方進度條容器 -->
+        <div class="w-full max-w-xl space-y-4">
+            <div class="flex justify-between items-end mb-1">
+                <span id="round-label" class="text-blue-100 font-bold text-lg">項目 1/5</span>
+                <span id="set-label" class="text-white/80 text-sm">第 1 遍</span>
+            </div>
+            
+            <div id="progress-bar-container" class="flex w-full h-3 gap-1.5">
+                <!-- 由 JS 動態生成方塊 -->
+            </div>
+        </div>
+
+        <!-- 中央主要資訊區 (大編號 + 倒數/標籤同一行) -->
+        <div class="text-center flex flex-col items-center flex-1 justify-center">
+            <!-- 項目與學員編號 -->
+            <div id="display-id" class="text-[10rem] font-black text-white tracking-tight leading-none mb-2">
+                1-1
+            </div>
+            
+            <!-- 秒數與階段標籤並排 -->
+            <div class="flex items-center gap-2 justify-center mt-2">
+                <!-- 剩餘秒數 (使用 tabular-nums 與固定寬度 w-20 確保寬度恆等) -->
+                <div id="countdown" class="text-6xl font-bold tracking-tighter leading-none timer-glow tabular-nums w-20 text-center">
+                    08
+                </div>
+                <!-- 階段標籤 (使用 w-[125px] 避免英文字數長度不同造成排版抖動) -->
+                <div id="display-label" class="text-lg font-bold py-1 rounded-full border border-white/30 bg-black/10 w-[125px] text-center">
+                    預備 PREP
+                </div>
+            </div>
+        </div>
+
+        <!-- 下方控制區 (等寬、縮小按鈕，避免變形) -->
+        <div class="w-full max-w-[280px] flex gap-3 mb-4">
+            <button id="pause-btn" onclick="togglePause()" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl text-sm border border-white/20 transition-colors">
+                暫停
+            </button>
+            <button onclick="resetApp()" class="flex-1 bg-red-900/20 hover:bg-red-800/40 text-red-100/80 py-2.5 rounded-xl text-sm font-medium border border-red-500/20 transition-colors">
+                重設
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let config = { 
+            totalRounds: 0, 
+            setsPerRound: 0, 
+            prepTime: 8, // 固定預備時間為 8 秒
+            workTime: 0 
+        };
+        let state = { 
+            currentRound: 1, 
+            currentSet: 1, 
+            currentPlayer: 1, 
+            phase: 'PREP', 
+            timer: 0,
+            isPaused: false
+        };
+        let intervalId = null;
+
+        // 語音引擎初始化
+        const synth = window.speechSynthesis;
+        let voices = [];
+
+        function initVoices() {
+            voices = synth.getVoices();
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = () => {
+                    voices = synth.getVoices();
+                };
+            }
+        }
+        // 頁面載入時先拉取一次語音列表
+        initVoices();
+
+        // 繁體中文數字轉換輔助器（讓 Google 小姐播報「一之一預備」而不是「1 減 1 預備」）
+        function getChineseNumber(num) {
+            const chineseNums = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+            return chineseNums[num] || num.toString();
+        }
+
+        // 精準發音控制（加入語速動態設定功能）
+        function speak(msg, rate = 1.5) {
+            // 先強行中斷之前還在播放的語音，確保即時同步
+            synth.cancel();
+
+            let u = new SpeechSynthesisUtterance();
+            u.text = msg;
+            u.rate = rate; // 動態調整語速
+            u.lang = 'zh-TW';
+
+            // 優先找 Microsoft 曉臻 或是 Google 國語 (臺灣)
+            let targetVoice = null;
+            for (let i = 0; i < voices.length; i++) {
+                if (voices[i].name.includes("Microsoft HsiaoChen") || voices[i].name.includes("曉臻")) {
+                    targetVoice = voices[i];
+                    break;
+                }
+            }
+            if (!targetVoice) {
+                for (let i = 0; i < voices.length; i++) {
+                    if (voices[i].name.includes("Google 國語") || (voices[i].name.includes("Google") && voices[i].lang.includes("zh-TW"))) {
+                        targetVoice = voices[i];
+                        break;
+                    }
+                }
+            }
+
+            if (targetVoice) {
+                u.voice = targetVoice;
+            }
+
+            synth.speak(u);
+        }
+
+        // 恢復自動語音組詞
+        function getPrepPhrase() {
+            const r = getChineseNumber(state.currentSet);
+            const p = getChineseNumber(state.currentPlayer);
+            return `${r}之${p}預備`;
+        }
+
+        function startApp() {
+            config.totalRounds = parseInt(document.getElementById('input-rounds').value) || 1;
+            config.setsPerRound = parseInt(document.getElementById('input-sets').value) || 1;
+            config.workTime = parseInt(document.getElementById('input-work').value) || 30;
+
+            state.currentRound = 1;
+            state.currentSet = 1;
+            state.currentPlayer = 1;
+            state.phase = 'PREP';
+            state.timer = config.prepTime;
+            state.isPaused = false;
+
+            initProgressBar();
+            
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('timer-screen').classList.remove('hidden');
+            
+            // 初始化暫停按鈕外觀
+            const pauseBtn = document.getElementById('pause-btn');
+            pauseBtn.innerText = "暫停";
+            pauseBtn.className = "flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl text-sm border border-white/20 transition-colors";
+
+            updateUI();
+            
+            // 開始的瞬間立刻播報第一組預備，語速放緩至 1.2
+            speak(getPrepPhrase(), 1.2);
+
+            startTimer();
+        }
+
+        function startTimer() {
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(() => {
+                if (!state.isPaused) {
+                    tick();
+                }
+            }, 1000);
+        }
+
+        function tick() {
+            if (state.timer > 1) {
+                state.timer--;
+                // 精確的時間刻度綁定發聲，不使用任何非同步的 setTimeout，防止語音重疊
+                if (state.timer === 6 && state.phase === 'PREP') {
+                    // 第 6 秒時，以流暢中速 1.2 唸出「X之X預備」
+                    speak(getPrepPhrase(), 1.2);
+                } else if (state.timer === 3) {
+                    speak("3", 1.6);
+                } else if (state.timer === 2) {
+                    speak("2", 1.6);
+                } else if (state.timer === 1) {
+                    speak("1", 1.6);
+                }
+            } else {
+                moveToNextState();
+            }
+            updateUI();
+        }
+
+        function moveToNextState() {
+            if (state.phase === 'PREP') {
+                state.phase = 'WORK';
+                state.timer = config.workTime;
+                speak("開始", 1.2);
+            } else {
+                if (state.currentPlayer === 1) { 
+                    state.currentPlayer = 2; 
+                } else if (state.currentSet < config.setsPerRound) { 
+                    state.currentSet++; 
+                    state.currentPlayer = 1; 
+                } else if (state.currentRound < config.totalRounds) { 
+                    state.currentRound++; 
+                    state.currentSet = 1; 
+                    state.currentPlayer = 1; 
+                } else { 
+                    finishTraining(); 
+                    return; 
+                }
+                
+                state.phase = 'PREP';
+                state.timer = config.prepTime;
+                speak("換人", 1.2); // 階段切換時只播報「換人」，剩下的「預備」交給 tick 的 6 秒判斷
+            }
+        }
+
+        function initProgressBar() {
+            const container = document.getElementById('progress-bar-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= config.totalRounds; i++) {
+                const segment = document.createElement('div');
+                segment.className = 'flex-1 bg-white/20 rounded-full progress-segment overflow-hidden';
+                segment.innerHTML = `<div id="round-inner-${i}" class="h-full bg-white/80 w-0 transition-all duration-500"></div>`;
+                container.appendChild(segment);
+            }
+        }
+
+        function updateUI() {
+            const displayId = document.getElementById('display-id');
+            const displayLabel = document.getElementById('display-label');
+            const countdown = document.getElementById('countdown');
+            const roundLabel = document.getElementById('round-label');
+            const setLabel = document.getElementById('set-label');
+
+            displayId.innerText = `${state.currentSet}-${state.currentPlayer}`;
+            countdown.innerText = state.timer.toString().padStart(2, '0');
+            roundLabel.innerText = `項目 ${state.currentRound} / ${config.totalRounds}`;
+            setLabel.innerText = `第 ${state.currentSet} 遍`;
+
+            if (state.phase === 'PREP') {
+                document.body.className = "bg-amber-600 transition-colors duration-700 min-h-screen flex flex-col items-center justify-center p-4";
+                displayLabel.innerText = "預備 PREP";
+            } else {
+                document.body.className = "bg-emerald-600 transition-colors duration-700 min-h-screen flex flex-col items-center justify-center p-4";
+                displayLabel.innerText = "運動 WORK";
+            }
+
+            // 分段進度條更新邏輯
+            for (let i = 1; i <= config.totalRounds; i++) {
+                const inner = document.getElementById(`round-inner-${i}`);
+                if (!inner) continue;
+
+                if (i < state.currentRound) {
+                    inner.style.width = '100%';
+                    inner.style.opacity = '0.4';
+                } else if (i === state.currentRound) {
+                    const totalUnitsInRound = config.setsPerRound * 2;
+                    const completedUnits = ((state.currentSet - 1) * 2) + (state.currentPlayer - 1);
+                    const percent = (completedUnits / totalUnitsInRound) * 100;
+                    inner.style.width = `${percent}%`;
+                    inner.style.opacity = '1';
+                } else {
+                    inner.style.width = '0%';
+                }
+            }
+        }
+
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            const btn = document.getElementById('pause-btn');
+            btn.innerText = state.isPaused ? "繼續" : "暫停";
+            
+            // 暫停時一併將發音靜音
+            if (state.isPaused) {
+                synth.cancel();
+            }
+
+            btn.className = state.isPaused 
+                ? "flex-1 bg-blue-500 text-white font-medium py-2.5 rounded-xl text-sm border border-blue-400 transition-colors" 
+                : "flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl text-sm border border-white/20 transition-colors";
+        }
+
+        function finishTraining() {
+            clearInterval(intervalId);
+            document.getElementById('display-id').innerText = "DONE";
+            document.getElementById('countdown').innerText = "00";
+            speak("訓練結束", 1.3);
+            setTimeout(() => {
+                resetApp();
+            }, 3000);
+        }
+
+        function resetApp() {
+            clearInterval(intervalId);
+            synth.cancel(); // 重置時切斷所有殘用語音
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('timer-screen').classList.add('hidden');
+            document.body.className = "bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4";
+        }
+    </script>
+</body>
+</html>
