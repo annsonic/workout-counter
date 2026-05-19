@@ -217,7 +217,13 @@
             if (state.timer > 1) {
                 state.timer--;
                 // 精確的時間刻度綁定發聲，不使用任何非同步的 setTimeout，防止語音重疊
-                if (state.timer === 6 && state.phase === 'PREP') {
+                const isInitialPrep =
+                    state.phase === 'PREP' &&
+                    state.currentRound === 1 &&
+                    state.currentSet === 1 &&
+                    state.currentPlayer === 1;
+
+                if (state.timer === 6 && state.phase === 'PREP' && !isInitialPrep) {
                     // 第 6 秒時，以流暢中速 1.2 唸出「X之X預備」
                     speak(getPrepPhrase(), 1.2);
                 } else if (state.timer === 3) {
