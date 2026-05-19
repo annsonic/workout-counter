@@ -245,6 +245,7 @@
                 state.timer = config.workTime;
                 speak("開始", 1.2);
             } else {
+                let transitionPrompt = "換人";
                 if (state.currentPlayer === 1) { 
                     state.currentPlayer = 2; 
                 } else if (state.currentSet < config.setsPerRound) { 
@@ -254,6 +255,7 @@
                     state.currentRound++; 
                     state.currentSet = 1; 
                     state.currentPlayer = 1; 
+                    transitionPrompt = "下一個動作";
                 } else { 
                     finishTraining(); 
                     return; 
@@ -261,7 +263,7 @@
                 
                 state.phase = 'PREP';
                 state.timer = config.prepTime;
-                speak("換人", 1.2); // 階段切換時只播報「換人」，剩下的「預備」交給 tick 的 6 秒判斷
+                speak(transitionPrompt, 1.2); // 階段切換時播報轉場口令，剩下的「預備」交給 tick 的 6 秒判斷
             }
         }
 
