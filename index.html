@@ -141,6 +141,8 @@
 			isFinished: false
         };
         let intervalId = null;
+		let phaseStartTime = null;   // Date.now() 的毫秒時間戳
+		let phaseDuration  = 0;      // 當前階段總秒數
 
         const synth = window.speechSynthesis;
         let voices = [];
@@ -271,6 +273,9 @@
             state.timer  = config.prepTime;
             state.isPaused = false;
 			state.isFinished = false;
+			
+			phaseDuration  = config.prepTime;
+			phaseStartTime = Date.now();
 
             initProgressBar();
 
@@ -287,36 +292,47 @@
         }
 
         function startTimer() {
+			// 維持 setInterval 只做「輪詢」用途，真實時間由 Date.now() 決定
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(() => {
                 if (!state.isPaused) tick();
-            }, 1000);
+            }, 200);   // 200ms 輪詢，確保整秒切換最多只晚 200ms
         }
 
         function tick() {
-            if (state.timer > 1) {
-                state.timer--;
-                const isInitialPrep =
-                    state.phase === 'PREP' &&
-                    state.currentRound  === 1 &&
-                    state.currentSet    === 1 &&
-                    state.currentPlayer === 1;
+			const elapsed = Math.floor((Date.now() - phaseStartTime) / 1000);
+			const remaining = phaseDuration - elapsed;
+			const prevTimer    = state.timer;
+            if (remaining > 0) {
+				state.timer = remaining;
 
-                if (state.timer === 6 && state.phase === 'PREP' && !isInitialPrep) {
-                    speak(getPrepPhrase(), 1.2);
-                } else if (state.timer === 3) { speak("3", 1.6);
-                } else if (state.timer === 2) { speak("2", 1.6);
-                } else if (state.timer === 1) { speak("1", 1.6); }
-            } else {
-                moveToNextState();
-            }
-            updateUI();
+				// 語音觸發：只在秒數「剛好跨越」該刻度時播報（避免 200ms 輪詢重複觸發）
+				if (prevTimer !== remaining) {
+					const isInitialPrep =
+						state.phase === 'PREP' &&
+						state.currentRound  === 1 &&
+						state.currentSet    === 1 &&
+						state.currentPlayer === 1;
+
+					if (remaining === 6 && state.phase === 'PREP' && !isInitialPrep) {
+						speak(getPrepPhrase(), 1.2);
+					} else if (remaining === 3) { speak("3", 1.6);
+					} else if (remaining === 2) { speak("2", 1.6);
+					} else if (remaining === 1) { speak("1", 1.6); }
+				}
+			} else {
+				state.timer = 0;
+				moveToNextState();
+			}
+			updateUI();
         }
 
         function moveToNextState() {
             if (state.phase === 'PREP') {
                 state.phase = 'WORK';
                 state.timer = config.workTime;
+				phaseDuration  = config.workTime;
+				phaseStartTime = Date.now();
                 speak("開始", 1.2);
             } else {
                 let transitionPrompt = "換人";
@@ -336,6 +352,8 @@
                 }
                 state.phase = 'PREP';
                 state.timer = config.prepTime;
+				phaseDuration  = config.prepTime;
+				phaseStartTime = Date.now();
                 speak(transitionPrompt, 1.2);
             }
         }
@@ -352,6 +370,17 @@
         }
 
         function updateUI() {
+			// 訓練結束：只填滿進度條，其他 DOM 保持 finishTraining() 設定的樣子
+			if (state.isFinished) {
+				for (let i = 1; i <= config.totalRounds; i++) {
+					const inner = document.getElementById(`round-inner-${i}`);
+					if (!inner) continue;
+					inner.style.width   = '100%';
+					inner.style.opacity = '1';
+				}
+				return;  // ← 直接返回，不執行下方任何覆蓋邏輯
+			}
+			
             const displayId   = document.getElementById('display-id');
             const displayLabel = document.getElementById('display-label');
             const countdown   = document.getElementById('countdown');
@@ -375,11 +404,7 @@
             for (let i = 1; i <= config.totalRounds; i++) {
                 const inner = document.getElementById(`round-inner-${i}`);
                 if (!inner) continue;
-                if (state.isFinished) {
-					// 訓練結束：所有格子填滿，不再套用計算邏輯
-					inner.style.width   = '100%';
-					inner.style.opacity = '1';
-				} else if (i < state.currentRound) {
+                if (i < state.currentRound) {
                     inner.style.width   = '100%';
                     inner.style.opacity = '0.4';
                 } else if (i === state.currentRound) {
@@ -398,7 +423,16 @@
             state.isPaused = !state.isPaused;
             const btn = document.getElementById('pause-btn');
             btn.innerText = state.isPaused ? "繼續" : "暫停";
-            if (state.isPaused) synth.cancel();
+			
+            if (state.isPaused) {
+				// 暫停：保存當下剩餘秒數，供恢復時重新對齊
+				synth.cancel();
+				phaseDuration  = state.timer;   // 剩餘秒數當作新的 duration
+			} else {
+				// 恢復：以現在為新起點重設時間戳
+				phaseStartTime = Date.now();
+			}
+			
             btn.className = state.isPaused
                 ? "flex-1 bg-blue-500 text-white font-medium py-2.5 rounded-xl text-sm border border-blue-400 transition-colors"
                 : "flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl text-sm border border-white/20 transition-colors";
