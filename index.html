@@ -9,28 +9,115 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', "Microsoft JhengHei", sans-serif; }
         .progress-segment { transition: all 0.3s ease; }
-        .timer-glow { text-shadow: 0 0 15px rgba(255,255,255,0.2); }
-        /* 輸入驗證錯誤樣式 */
+        .timer-glow { text-shadow: 0 0 15px rgba(255,255,255,0.1); }
+
         input.input-error {
-            ring: 2px;
-            outline: 2px solid #ef4444;
+            outline: 2px solid #a06060;
             outline-offset: 0px;
         }
+
+        /* ── 莫蘭迪色系變數 ── */
+        :root {
+            --bg-base:       #1c1c1e;              /* 頁面底色：深煤灰   */
+            --bg-card:       #2a2a2d;              /* 卡片：深霧灰       */
+            --bg-input:      #3a3a3e;              /* 輸入框：霧炭灰     */
+            --color-accent:  #7a9bb5;              /* 強調色：霧藍       */
+            --color-muted:   #8a8a8e;              /* 說明文字：霧銀     */
+            --color-label:   #b0b0b5;              /* 次要文字           */
+            --btn-primary:   #4a6880;              /* 主按鈕：灰藍       */
+            --btn-primary-h: #5a7a94;
+            --bg-prep:       #7a5c4a;              /* PREP：燻陶土棕     */
+            --bg-work:       #4a6b5a;              /* WORK：苔綠霧       */
+        }
+
+        /* ── 畫面底色 ── */
+        body.screen-setup {
+            background-color: var(--bg-base);
+        }
+        body.screen-prep {
+            background-color: var(--bg-prep);
+            transition: background-color 0.7s ease;
+        }
+        body.screen-work {
+            background-color: var(--bg-work);
+            transition: background-color 0.7s ease;
+        }
+
+        /* ── 設定畫面元件 ── */
+        #setup-screen {
+            background-color: var(--bg-card);
+        }
+        #setup-screen h1 {
+            color: var(--color-accent);
+        }
+        #setup-screen label {
+            color: var(--color-muted);
+        }
+        #setup-screen input[type="number"] {
+            background-color: var(--bg-input);
+            color: #e0e0e0;
+        }
+        #setup-screen input[type="number"]:focus {
+            outline: 2px solid var(--color-accent);
+        }
+        #total-time-label {
+            background-color: rgba(255,255,255,0.05);
+            color: var(--color-label);
+        }
+        #start-btn {
+            background-color: var(--btn-primary);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        #start-btn:hover  { background-color: var(--btn-primary-h); }
+        #start-btn:active { transform: scale(0.95); }
+
+        /* ── 計時畫面元件 ── */
+        #round-label { color: rgba(255,255,255,0.65); }
+
+        .tag-pill {
+            background-color: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.80);
+        }
+
+        /* 暫停按鈕（預設） */
+        #pause-btn {
+            background-color: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.85);
+            transition: background-color 0.2s;
+        }
+        #pause-btn:hover { background-color: rgba(255,255,255,0.14); }
+        /* 暫停中：灰藍高亮 */
+        #pause-btn.is-paused {
+            background-color: #4a6880;
+            border-color: #5a7a94;
+            color: #fff;
+        }
+
+        /* 重設按鈕 */
+        #reset-btn {
+            background-color: rgba(160,80,80,0.15);
+            border-color: rgba(160,80,80,0.25);
+            color: rgba(255,180,180,0.75);
+            transition: background-color 0.2s;
+        }
+        #reset-btn:hover { background-color: rgba(160,80,80,0.28); }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+<body class="screen-setup text-white min-h-screen flex flex-col items-center justify-center p-4">
 
     <!-- 設定畫面 -->
-    <div id="setup-screen" class="w-full max-w-md bg-slate-800 p-8 rounded-3xl shadow-2xl space-y-6">
-        <h1 class="text-3xl font-black text-center text-blue-400 mb-6">訓練參數設定</h1>
+    <div id="setup-screen" class="w-full max-w-md p-8 rounded-3xl shadow-2xl space-y-6">
+        <h1 class="text-3xl font-black text-center mb-6">訓練參數設定</h1>
         
         <div class="space-y-4">
             <!-- 第 1 排：動作項目 -->
             <div class="grid grid-cols-12 items-center gap-3">
-                <label class="col-span-5 text-right text-sm font-semibold text-slate-400">動作項目 (Rounds)</label>
+                <label class="col-span-5 text-right text-sm font-semibold">動作項目 (Rounds)</label>
                 <div class="col-span-7">
                     <input type="number" id="input-rounds" min="1" max="99" value="5"
-                        class="w-full bg-slate-700 border-none rounded-xl p-3 text-xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                        class="w-full border-none rounded-xl p-3 text-xl font-bold text-center outline-none"
                         oninput="validateInput(this, 1, 99); updateTotalTime()"
                         onblur="clampInput(this, 1, 99); updateTotalTime()">
                 </div>
@@ -38,15 +125,15 @@
             <!-- 第 1 排：錯誤提示 -->
             <div id="error-rounds" class="grid grid-cols-12 gap-3 hidden">
                 <div class="col-span-5"></div>
-                <p class="col-span-7 text-red-400 text-xs mt-[-8px]">請輸入 1 ~ 99 的整數</p>
+                <p class="col-span-7 text-xs mt-[-8px]" style="color:#c08080;">請輸入 1 ~ 99 的整數</p>
             </div>
 
             <!-- 第 2 排：單人循環 -->
             <div class="grid grid-cols-12 items-center gap-3">
-                <label class="col-span-5 text-right text-sm font-semibold text-slate-400">單人循環 (Sets)</label>
+                <label class="col-span-5 text-right text-sm font-semibold">單人循環 (Sets)</label>
                 <div class="col-span-7">
                     <input type="number" id="input-sets" min="1" max="99" value="2"
-                        class="w-full bg-slate-700 border-none rounded-xl p-3 text-xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                        class="w-full border-none rounded-xl p-3 text-xl font-bold text-center outline-none"
                         oninput="validateInput(this, 1, 99); updateTotalTime()"
                         onblur="clampInput(this, 1, 99); updateTotalTime()">
                 </div>
@@ -54,15 +141,15 @@
             <!-- 第 2 排：錯誤提示 -->
             <div id="error-sets" class="grid grid-cols-12 gap-3 hidden">
                 <div class="col-span-5"></div>
-                <p class="col-span-7 text-red-400 text-xs mt-[-8px]">請輸入 1 ~ 99 的整數</p>
+                <p class="col-span-7 text-xs mt-[-8px]" style="color:#c08080;">請輸入 1 ~ 99 的整數</p>
             </div>
 
             <!-- 第 3 排：運動時間 -->
             <div class="grid grid-cols-12 items-center gap-3">
-                <label class="col-span-5 text-right text-sm font-semibold text-slate-400">運動時間 (秒)</label>
+                <label class="col-span-5 text-right text-sm font-semibold">運動時間 (秒)</label>
                 <div class="col-span-7">
                     <input type="number" id="input-work" min="10" max="9999" value="40"
-                        class="w-full bg-slate-700 border-none rounded-xl p-3 text-xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                        class="w-full border-none rounded-xl p-3 text-xl font-bold text-center outline-none"
                         oninput="validateInput(this, 10, 9999); updateTotalTime()"
                         onblur="clampInput(this, 10, 9999); updateTotalTime()">
                 </div>
@@ -70,16 +157,16 @@
             <!-- 第 3 排：錯誤提示 -->
             <div id="error-work" class="grid grid-cols-12 gap-3 hidden">
                 <div class="col-span-5"></div>
-                <p class="col-span-7 text-red-400 text-xs mt-[-8px]">請輸入 10 ~ 9999 的整數</p>
+                <p class="col-span-7 text-xs mt-[-8px]" style="color:#c08080;">請輸入 10 ~ 9999 的整數</p>
             </div>
         </div>
 
-        <!-- ★ 需求 2：動態總訓練時間標籤 -->
-        <div id="total-time-label" class="text-center text-slate-300 text-sm font-semibold bg-slate-700/60 rounded-xl py-2 px-4">
+        <div id="total-time-label" class="text-center text-sm font-semibold rounded-xl py-2 px-4">
             <!-- 由 JS 動態填入 -->
         </div>
 
-        <button onclick="startApp()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl text-xl shadow-lg mt-4 transition-all active:scale-95">
+        <button id="start-btn" onclick="startApp()"
+            class="w-full text-white font-black py-4 rounded-2xl text-xl shadow-lg mt-4">
             開始訓練
         </button>
     </div>
@@ -90,7 +177,7 @@
         <!-- 上方進度條容器 -->
         <div class="w-full max-w-xl space-y-4">
             <div class="flex justify-between items-end mb-1">
-                <span id="round-label" class="text-blue-100 font-bold text-lg">項目 1/5</span>
+                <span id="round-label" class="font-bold text-lg">項目 1/5</span>
             </div>
             <div id="progress-bar-container" class="flex w-full h-3 gap-1.5">
                 <!-- 由 JS 動態生成方塊 -->
@@ -103,11 +190,14 @@
                 1-1
             </div>
             <div class="flex items-center gap-2 justify-center mt-2">
-                <div id="set-label" class="text-lg font-bold py-1 rounded-full border border-white/30 bg-black/10 w-[125px] text-center">第 1 遍</div>
-                <div id="countdown" class="text-6xl font-bold tracking-tighter leading-none timer-glow tabular-nums w-20 text-center">
+                <div id="set-label"
+                    class="tag-pill text-lg font-bold py-1 rounded-full border w-[125px] text-center">第 1 遍</div>
+                <div id="countdown"
+                    class="text-6xl font-bold tracking-tighter leading-none timer-glow tabular-nums w-20 text-center">
                     08
                 </div>
-                <div id="display-label" class="text-lg font-bold py-1 rounded-full border border-white/30 bg-black/10 w-[125px] text-center">
+                <div id="display-label"
+                    class="tag-pill text-lg font-bold py-1 rounded-full border w-[125px] text-center">
                     預備 PREP
                 </div>
             </div>
@@ -115,10 +205,12 @@
 
         <!-- 下方控制區 -->
         <div class="w-full max-w-[280px] flex gap-3 mb-4">
-            <button id="pause-btn" onclick="togglePause()" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl text-sm border border-white/20 transition-colors">
+            <button id="pause-btn" onclick="togglePause()"
+                class="flex-1 font-medium py-2.5 rounded-xl text-sm border">
                 暫停
             </button>
-            <button onclick="resetApp()" class="flex-1 bg-red-900/20 hover:bg-red-800/40 text-red-100/80 py-2.5 rounded-xl text-sm font-medium border border-red-500/20 transition-colors">
+            <button id="reset-btn" onclick="resetApp()"
+                class="flex-1 py-2.5 rounded-xl text-sm font-medium border">
                 重設
             </button>
         </div>
@@ -138,11 +230,12 @@
             phase: 'PREP', 
             timer: 0,
             isPaused: false,
-			isFinished: false
+            isFinished: false
         };
-        let intervalId = null;
-		let phaseStartTime = null;   // Date.now() 的毫秒時間戳
-		let phaseDuration  = 0;      // 當前階段總秒數
+        let intervalId     = null;
+        let finishTimeoutId = null;
+        let phaseStartTime = null;   // Date.now() 的毫秒時間戳
+        let phaseDuration  = 0;      // 當前階段總秒數
 
         const synth = window.speechSynthesis;
         let voices = [];
@@ -157,14 +250,10 @@
 
         // ─── 需求 1：輸入驗證 ────────────────────────────────────────────
 
-        /**
-         * oninput：即時檢查，超出範圍時標紅框並顯示錯誤訊息
-         */
         function validateInput(input, min, max) {
             const val = parseInt(input.value);
             const errorId = 'error-' + input.id.replace('input-', '');
             const errorEl = document.getElementById(errorId);
-
             const isInvalid = isNaN(val) || val < min || val > max;
             if (isInvalid) {
                 input.classList.add('input-error');
@@ -175,15 +264,11 @@
             }
         }
 
-        /**
-         * onblur：失去焦點時，若值仍不合法則強制 clamp 到範圍內
-         */
         function clampInput(input, min, max) {
             let val = parseInt(input.value);
             if (isNaN(val) || val < min) val = min;
             if (val > max) val = max;
             input.value = val;
-            // clamp 後必然合法，清除錯誤狀態
             input.classList.remove('input-error');
             const errorId = 'error-' + input.id.replace('input-', '');
             const errorEl = document.getElementById(errorId);
@@ -196,25 +281,20 @@
             const rounds   = parseInt(document.getElementById('input-rounds').value) || 0;
             const sets     = parseInt(document.getElementById('input-sets').value)   || 0;
             const workTime = parseInt(document.getElementById('input-work').value)   || 0;
-            const prepTime = 8; // 固定預備時間
-
+            const prepTime = 8;
             const totalSeconds = (prepTime + workTime) * 2 * sets * rounds;
             const label = document.getElementById('total-time-label');
-
             if (rounds === 0 || sets === 0 || workTime === 0) {
-                label.innerText = '總訓練時間：—';
+                label.textContent = '總訓練時間：—';
                 return;
             }
-
             if (totalSeconds <= 60) {
-                label.innerText = `總訓練時間：約 ${totalSeconds} 秒`;
+                label.textContent = `總訓練時間：約 ${totalSeconds} 秒`;
             } else {
                 const minutes = (totalSeconds / 60).toFixed(1);
-                label.innerText = `總訓練時間：約 ${minutes} 分鐘`;
+                label.textContent = `總訓練時間：約 ${minutes} 分鐘`;
             }
         }
-
-        // 頁面載入時先計算一次預設值
         updateTotalTime();
 
         // ─── 語音 ────────────────────────────────────────────────────────
@@ -230,7 +310,6 @@
             u.text = msg;
             u.rate = rate;
             u.lang = 'zh-TW';
-
             let targetVoice = null;
             for (let i = 0; i < voices.length; i++) {
                 if (voices[i].name.includes("Microsoft HsiaoChen") || voices[i].name.includes("曉臻")) {
@@ -257,7 +336,6 @@
         // ─── 主流程 ──────────────────────────────────────────────────────
 
         function startApp() {
-            // 啟動前再做一次 clamp，確保值合法
             clampInput(document.getElementById('input-rounds'), 1, 99);
             clampInput(document.getElementById('input-sets'),   1, 99);
             clampInput(document.getElementById('input-work'),  10, 9999);
@@ -269,13 +347,13 @@
             state.currentRound  = 1;
             state.currentSet    = 1;
             state.currentPlayer = 1;
-            state.phase  = 'PREP';
-            state.timer  = config.prepTime;
-            state.isPaused = false;
-			state.isFinished = false;
-			
-			phaseDuration  = config.prepTime;
-			phaseStartTime = Date.now();
+            state.phase      = 'PREP';
+            state.timer      = config.prepTime;
+            state.isPaused   = false;
+            state.isFinished = false;
+
+            phaseDuration  = config.prepTime;
+            phaseStartTime = Date.now();
 
             initProgressBar();
 
@@ -283,8 +361,8 @@
             document.getElementById('timer-screen').classList.remove('hidden');
 
             const pauseBtn = document.getElementById('pause-btn');
-            pauseBtn.innerText = "暫停";
-            pauseBtn.className = "flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl text-sm border border-white/20 transition-colors";
+            pauseBtn.textContent = "暫停";
+            pauseBtn.classList.remove('is-paused');
 
             updateUI();
             speak(getPrepPhrase(), 1.2);
@@ -292,7 +370,6 @@
         }
 
         function startTimer() {
-			// 維持 setInterval 只做「輪詢」用途，真實時間由 Date.now() 決定
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(() => {
                 if (!state.isPaused) tick();
@@ -300,39 +377,39 @@
         }
 
         function tick() {
-			const elapsed = Math.floor((Date.now() - phaseStartTime) / 1000);
-			const remaining = phaseDuration - elapsed;
-			const prevTimer    = state.timer;
+            const elapsed   = Math.floor((Date.now() - phaseStartTime) / 1000);
+            const remaining = phaseDuration - elapsed;
+            const prevTimer = state.timer;
+
             if (remaining > 0) {
-				state.timer = remaining;
+                state.timer = remaining;
 
-				// 語音觸發：只在秒數「剛好跨越」該刻度時播報（避免 200ms 輪詢重複觸發）
-				if (prevTimer !== remaining) {
-					const isInitialPrep =
-						state.phase === 'PREP' &&
-						state.currentRound  === 1 &&
-						state.currentSet    === 1 &&
-						state.currentPlayer === 1;
+                if (prevTimer !== remaining) {
+                    const isInitialPrep =
+                        state.phase === 'PREP' &&
+                        state.currentRound  === 1 &&
+                        state.currentSet    === 1 &&
+                        state.currentPlayer === 1;
 
-					if (remaining === 6 && state.phase === 'PREP' && !isInitialPrep) {
-						speak(getPrepPhrase(), 1.2);
-					} else if (remaining === 3) { speak("3", 1.6);
-					} else if (remaining === 2) { speak("2", 1.6);
-					} else if (remaining === 1) { speak("1", 1.6); }
-				}
-			} else {
-				state.timer = 0;
-				moveToNextState();
-			}
-			updateUI();
+                    if (remaining === 6 && state.phase === 'PREP' && !isInitialPrep) {
+                        speak(getPrepPhrase(), 1.2);
+                    } else if (remaining === 3) { speak("3", 1.6);
+                    } else if (remaining === 2) { speak("2", 1.6);
+                    } else if (remaining === 1) { speak("1", 1.6); }
+                }
+            } else {
+                state.timer = 0;
+                moveToNextState();
+            }
+            updateUI();
         }
 
         function moveToNextState() {
             if (state.phase === 'PREP') {
-                state.phase = 'WORK';
-                state.timer = config.workTime;
-				phaseDuration  = config.workTime;
-				phaseStartTime = Date.now();
+                state.phase    = 'WORK';
+                state.timer    = config.workTime;
+                phaseDuration  = config.workTime;
+                phaseStartTime = Date.now();
                 speak("開始", 1.2);
             } else {
                 let transitionPrompt = "換人";
@@ -350,10 +427,10 @@
                     finishTraining();
                     return;
                 }
-                state.phase = 'PREP';
-                state.timer = config.prepTime;
-				phaseDuration  = config.prepTime;
-				phaseStartTime = Date.now();
+                state.phase    = 'PREP';
+                state.timer    = config.prepTime;
+                phaseDuration  = config.prepTime;
+                phaseStartTime = Date.now();
                 speak(transitionPrompt, 1.2);
             }
         }
@@ -363,41 +440,36 @@
             container.innerHTML = '';
             for (let i = 1; i <= config.totalRounds; i++) {
                 const segment = document.createElement('div');
-                segment.className = 'flex-1 bg-white/20 rounded-full progress-segment overflow-hidden';
-                segment.innerHTML = `<div id="round-inner-${i}" class="h-full bg-white/80 w-0 transition-all duration-500"></div>`;
+                segment.className = 'flex-1 rounded-full progress-segment overflow-hidden';
+                segment.style.backgroundColor = 'rgba(255,255,255,0.15)';
+                segment.innerHTML = `<div id="round-inner-${i}" class="h-full transition-all duration-500" style="width:0%;background-color:rgba(255,255,255,0.70)"></div>`;
                 container.appendChild(segment);
             }
         }
 
         function updateUI() {
-			// 訓練結束：只填滿進度條，其他 DOM 保持 finishTraining() 設定的樣子
-			if (state.isFinished) {
-				for (let i = 1; i <= config.totalRounds; i++) {
-					const inner = document.getElementById(`round-inner-${i}`);
-					if (!inner) continue;
-					inner.style.width   = '100%';
-					inner.style.opacity = '1';
-				}
-				return;  // ← 直接返回，不執行下方任何覆蓋邏輯
-			}
-			
-            const displayId   = document.getElementById('display-id');
-            const displayLabel = document.getElementById('display-label');
-            const countdown   = document.getElementById('countdown');
-            const roundLabel  = document.getElementById('round-label');
-            const setLabel    = document.getElementById('set-label');
+            // 訓練結束：只填滿進度條，其他 DOM 保持 finishTraining() 設定的樣子
+            if (state.isFinished) {
+                for (let i = 1; i <= config.totalRounds; i++) {
+                    const inner = document.getElementById(`round-inner-${i}`);
+                    if (!inner) continue;
+                    inner.style.width   = '100%';
+                    inner.style.opacity = '1';
+                }
+                return;
+            }
 
-            displayId.innerText  = `${state.currentSet}-${state.currentPlayer}`;
-            countdown.innerText  = state.timer.toString().padStart(2, '0');
-            roundLabel.innerText = `項目 ${state.currentRound} / ${config.totalRounds}`;
-            setLabel.innerText   = `第 ${state.currentSet} 遍`;
+            document.getElementById('display-id').textContent   = `${state.currentSet}-${state.currentPlayer}`;
+            document.getElementById('countdown').textContent    = state.timer.toString().padStart(2, '0');
+            document.getElementById('round-label').textContent  = `項目 ${state.currentRound} / ${config.totalRounds}`;
+            document.getElementById('set-label').textContent    = `第 ${state.currentSet} 遍`;
 
             if (state.phase === 'PREP') {
-                document.body.className = "bg-amber-600 transition-colors duration-700 min-h-screen flex flex-col items-center justify-center p-4";
-                displayLabel.innerText  = "預備 PREP";
+                document.body.className = "screen-prep text-white min-h-screen flex flex-col items-center justify-center p-4";
+                document.getElementById('display-label').textContent = "預備 PREP";
             } else {
-                document.body.className = "bg-emerald-600 transition-colors duration-700 min-h-screen flex flex-col items-center justify-center p-4";
-                displayLabel.innerText  = "運動 WORK";
+                document.body.className = "screen-work text-white min-h-screen flex flex-col items-center justify-center p-4";
+                document.getElementById('display-label').textContent = "運動 WORK";
             }
 
             // 分段進度條
@@ -406,7 +478,7 @@
                 if (!inner) continue;
                 if (i < state.currentRound) {
                     inner.style.width   = '100%';
-                    inner.style.opacity = '0.4';
+                    inner.style.opacity = '0.35';
                 } else if (i === state.currentRound) {
                     const totalUnitsInRound = config.setsPerRound * 2;
                     const completedUnits    = ((state.currentSet - 1) * 2) + (state.currentPlayer - 1);
@@ -422,43 +494,41 @@
         function togglePause() {
             state.isPaused = !state.isPaused;
             const btn = document.getElementById('pause-btn');
-            btn.innerText = state.isPaused ? "繼續" : "暫停";
-			
+            btn.textContent = state.isPaused ? "繼續" : "暫停";
+
             if (state.isPaused) {
-				// 暫停：保存當下剩餘秒數，供恢復時重新對齊
-				synth.cancel();
-				phaseDuration  = state.timer;   // 剩餘秒數當作新的 duration
-			} else {
-				// 恢復：以現在為新起點重設時間戳
-				phaseStartTime = Date.now();
-			}
-			
-            btn.className = state.isPaused
-                ? "flex-1 bg-blue-500 text-white font-medium py-2.5 rounded-xl text-sm border border-blue-400 transition-colors"
-                : "flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl text-sm border border-white/20 transition-colors";
+                synth.cancel();
+                phaseDuration  = state.timer;   // 剩餘秒數當作新的 duration
+            } else {
+                phaseStartTime = Date.now();     // 恢復：以現在為新起點
+            }
+
+            btn.classList.toggle('is-paused', state.isPaused);
         }
 
         // ─── 需求 3：訓練結束時填滿所有進度條 ───────────────────────────
 
         function finishTraining() {
             clearInterval(intervalId);
-
             state.isFinished = true;
 
-            document.getElementById('display-id').innerText  = "DONE";
-            document.getElementById('countdown').innerText   = "00";
-            document.getElementById('display-label').innerText = "完成！";
+            document.getElementById('display-id').textContent    = "DONE";
+            document.getElementById('countdown').textContent     = "00";
+            document.getElementById('display-label').textContent = "完成！";
             speak("訓練結束", 1.3);
 
-            setTimeout(() => { resetApp(); }, 3000);
+            updateUI();  // 填滿所有進度條
+
+            finishTimeoutId = setTimeout(() => { resetApp(); }, 3000);
         }
 
         function resetApp() {
             clearInterval(intervalId);
+            if (finishTimeoutId) { clearTimeout(finishTimeoutId); finishTimeoutId = null; }
             synth.cancel();
             document.getElementById('setup-screen').classList.remove('hidden');
             document.getElementById('timer-screen').classList.add('hidden');
-            document.body.className = "bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4";
+            document.body.className = "screen-setup text-white min-h-screen flex flex-col items-center justify-center p-4";
         }
     </script>
 </body>
