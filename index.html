@@ -373,7 +373,7 @@
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(() => {
                 if (!state.isPaused) tick();
-            }, 200);   // 200ms 輪詢，確保整秒切換最多只晚 200ms
+            }, 200);   // 200ms 輪詢（前景正常使用下，整秒切換誤差通常 < 200ms）
         }
 
         function tick() {
