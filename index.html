@@ -248,6 +248,19 @@
         }
         initVoices();
 
+        // ─── 語音合成預熱 ───────────────────────────────────────────────
+        function warmUpSpeechSynthesis() {
+            const u = new SpeechSynthesisUtterance('');
+            u.rate = 1.5;
+            u.lang = 'zh-TW';
+            synth.speak(u);
+        }
+
+        // 頁面加載時預熱
+        window.addEventListener('load', () => {
+            setTimeout(warmUpSpeechSynthesis, 500);
+        });
+
         // ─── 需求 1：輸入驗證 ────────────────────────────────────────────
 
         function validateInput(input, min, max) {
@@ -297,7 +310,7 @@
         }
         updateTotalTime();
 
-        // ─── 語音 ────────────────────────────────────────────────────────
+        // ─── 語音 ───────────────────────────────────────────────────────
 
         function getChineseNumber(num) {
             const chineseNums = ["零","一","二","三","四","五","六","七","八","九","十"];
@@ -501,7 +514,7 @@
                 synth.cancel();
                 phaseDuration  = state.timer;   // 剩餘秒數當作新的 duration
             } else {
-                phaseStartTime = Date.now();     // 恢復：以現在為新起點
+                phaseStartTime = Date.now();     // 恢復：以��在為新起點
             }
 
             btn.classList.toggle('is-paused', state.isPaused);
