@@ -227,15 +227,49 @@
             cursor: pointer;
             transition: all 0.2s ease;
             flex-shrink: 0;
+            position: relative;
         }
 
-        .secondary-btn:hover {
+        .secondary-btn:hover:not(:disabled) {
             background-color: rgba(255, 255, 255, 0.14);
             border-color: rgba(255, 255, 255, 0.30);
         }
 
-        .secondary-btn:active {
+        .secondary-btn:active:not(:disabled) {
             transform: scale(0.9);
+        }
+
+        /* ── 禁用狀態 ── */
+        .secondary-btn:disabled {
+            background-color: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.35);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* ── Tooltip 樣式 ── */
+        .secondary-btn:disabled::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            color: rgba(255, 200, 200, 0.9);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .secondary-btn:disabled:hover::after {
+            opacity: 1;
         }
 
         #reset-btn {
@@ -244,7 +278,7 @@
             color: rgba(255, 180, 180, 0.85);
         }
 
-        #reset-btn:hover {
+        #reset-btn:hover:not(:disabled) {
             background-color: rgba(160, 80, 80, 0.6);
             border-color: rgba(160, 80, 80, 0.8);
         }
@@ -255,7 +289,7 @@
             color: rgba(255, 255, 255, 0.8);
         }
 
-        #adjust-btn:hover {
+        #adjust-btn:hover:not(:disabled) {
             background-color: rgba(255, 255, 255, 0.14);
             border-color: rgba(255, 255, 255, 0.30);
         }
@@ -410,7 +444,8 @@
             </button>
 
             <!-- 右側：調整按鈕 -->
-            <button id="adjust-btn" onclick="openAdjustPanel()" class="secondary-btn" title="調整參數">
+            <button id="adjust-btn" onclick="openAdjustPanel()" class="secondary-btn" title="調整參數"
+                data-tooltip="換人期間才允許調整設定">
                 ⚙
             </button>
         </div>
@@ -722,6 +757,18 @@
         }
 
         function updateUI() {
+            // ── 更新調整按鈕狀態 ──────────────────────────────────────────
+            const adjustBtn = document.getElementById('adjust-btn');
+            if (!state.isFinished) {
+                if (state.phase === 'PREP') {
+                    adjustBtn.disabled = false;
+                } else {
+                    adjustBtn.disabled = true;
+                }
+            } else {
+                adjustBtn.disabled = true;
+            }
+
             // 訓練結束：只填滿進度條，其他 DOM 保持 finishTraining() 設定的樣子
             if (state.isFinished) {
                 for (let i = 1; i <= config.totalRounds; i++) {
@@ -785,6 +832,7 @@
             }
 
             btn.classList.toggle('is-paused', state.isPaused);
+            updateUI();  // 更新調整按鈕狀態
         }
 
         // ─── 需求 3：訓練結束時填滿所有進度條 ───────────────────────────
@@ -813,7 +861,12 @@
         }
 
         function openAdjustPanel() {
-            // 只有暫停時才能調整（可依需求拿掉此限制）
+            // 只在 PREP 階段允許開啟調整面板
+            if (state.phase !== 'PREP') {
+                return;
+            }
+
+            // 只有暫停時才能調整
             if (!state.isPaused) togglePause();
 
             document.getElementById('adj-rounds').value = config.totalRounds;
@@ -883,7 +936,7 @@
 
             closeAdjustPanel();
 
-            // 重繪進度條（totalRounds 可能已改變）
+            // ── 立即重繪進度條（config 已更新，totalRounds 可能已改變） ──
             initProgressBar();
             updateUI();
 
