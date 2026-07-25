@@ -109,52 +109,181 @@
             color: rgba(255, 255, 255, 0.65);
         }
 
+        /* ── 膠囊標籤（Pill）─ 降低視覺優先級 ── */
         .tag-pill {
-            background-color: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.18);
-            color: rgba(255, 255, 255, 0.80);
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.70);
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            white-space: nowrap;
+            width: 120px;
+            text-align: center;
         }
 
-        /* 暫停按鈕（預設） */
+        /* ── 主按鈕（Primary CTA）─ 播放/暫停 ── */
         #pause-btn {
-            background-color: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.15);
-            color: rgba(255, 255, 255, 0.85);
-            transition: background-color 0.2s;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: var(--btn-primary);
+            border: none;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
         }
 
         #pause-btn:hover {
-            background-color: rgba(255, 255, 255, 0.14);
+            background-color: var(--btn-primary-h);
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
         }
 
-        /* 暫停中：灰藍高亮 */
+        #pause-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 暫停中：高亮狀態 */
         #pause-btn.is-paused {
-            background-color: #4a6880;
-            border-color: #5a7a94;
-            color: #fff;
+            background-color: #5a7a94;
+            box-shadow: 0 0 20px rgba(122, 155, 181, 0.4);
         }
 
-        /* 重設按鈕 */
+        /* ── 播放/暫停圖標容器 ── */
+        .pause-play-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+        }
+
+        /* 暫停符號樣式：兩個豎條 */
+        .pause-icon {
+            display: inline-flex;
+            gap: 0.35rem;
+            align-items: center;
+            justify-content: center;
+            height: 2.2rem;
+        }
+
+        .pause-icon::before,
+        .pause-icon::after {
+            content: '';
+            display: inline-block;
+            width: 0.4rem;
+            height: 2rem;
+            background-color: currentColor;
+            border-radius: 0.05rem;
+        }
+
+        /* 播放符號樣式：三角形 */
+        .play-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 0;
+            height: 0;
+            border-left: 1.2rem solid currentColor;
+            border-top: 0.75rem solid transparent;
+            border-bottom: 0.75rem solid transparent;
+            margin-left: 0.3rem;
+        }
+
+        /* ── 次要按鈕（Secondary Controls）─ 重設與調整 ── */
+        .secondary-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.20);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .secondary-btn:hover {
+            background-color: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.30);
+        }
+
+        .secondary-btn:active {
+            transform: scale(0.9);
+        }
+
         #reset-btn {
             background-color: rgba(160, 80, 80, 0.15);
-            border-color: rgba(160, 80, 80, 0.25);
-            color: rgba(255, 180, 180, 0.75);
-            transition: background-color 0.2s;
+            border-color: rgba(160, 80, 80, 0.35);
+            color: rgba(255, 180, 180, 0.85);
         }
 
         #reset-btn:hover {
-            background-color: rgba(160, 80, 80, 0.28);
+            background-color: rgba(160, 80, 80, 0.6);
+            border-color: rgba(160, 80, 80, 0.8);
         }
 
-        /* 中途調整按鈕 */
         #adjust-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.18);
-            color: rgba(255, 255, 255, 0.8)
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.20);
+            color: rgba(255, 255, 255, 0.8);
         }
 
         #adjust-btn:hover {
             background-color: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.30);
+        }
+
+        /* ── 計時區域容器（中層資訊）─ 圓形佈局 ── */
+        .timer-info-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            position: relative;
+            width: 100%;
+        }
+
+        /* 計時數字 ─ 絕對中軸錨點 */
+        #countdown {
+            text-align: center;
+            flex-shrink: 0;
+            order: 2;
+        }
+
+        #set-label {
+            order: 1;
+        }
+
+        #display-label {
+            order: 3;
+        }
+
+        /* ── 媒體控制器容器 ── */
+        .media-control-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3rem;
+            width: 100%;
+            max-width: 320px;
         }
     </style>
 </head>
@@ -241,34 +370,38 @@
 
         <!-- 中央主要資訊區 -->
         <div class="text-center flex flex-col items-center flex-1 justify-center">
-            <div id="display-id" class="text-[10rem] font-black text-white tracking-tight leading-none mb-2">
+            <div id="display-id" class="text-[10rem] font-black text-white tracking-tight leading-none mb-8">
                 1-1
             </div>
-            <div class="flex items-center gap-2 justify-center mt-2">
-                <div id="set-label" class="tag-pill text-lg font-bold py-1 rounded-full border w-[125px] text-center">第
-                    1 遍</div>
+
+            <!-- 中層：計時器與標籤 ─ 計時數字中軸對齊 -->
+            <div class="timer-info-container mb-12">
+                <div id="set-label" class="tag-pill">第 1 遍</div>
                 <div id="countdown"
-                    class="text-6xl font-bold tracking-tighter leading-none timer-glow tabular-nums w-20 text-center">
+                    class="text-6xl font-bold tracking-tighter leading-none timer-glow tabular-nums w-32">
                     08
                 </div>
-                <div id="display-label"
-                    class="tag-pill text-lg font-bold py-1 rounded-full border w-[125px] text-center">
+                <div id="display-label" class="tag-pill">
                     預備 PREP
                 </div>
             </div>
         </div>
 
-        <!-- 下方控制區 -->
-        <div class="w-full max-w-[280px] flex gap-3 mb-4">
-            <button id="pause-btn" onclick="togglePause()" class="flex-1 font-medium py-2.5 rounded-xl text-sm border">
-                暫停
+        <!-- 下方控制區 ─ 媒體控制器佈局 -->
+        <div class="media-control-container mb-8">
+            <!-- 左側：重設按鈕 -->
+            <button id="reset-btn" onclick="resetApp()" class="secondary-btn" title="退出重來">
+                ↻
             </button>
-            <button id="reset-btn" onclick="resetApp()" class="flex-1 py-2.5 rounded-xl text-sm font-medium border">
-                重設
+
+            <!-- 中央：播放/暫停主按鈕 -->
+            <button id="pause-btn" onclick="togglePause()" class="pause-play-icon" title="暫停/繼續">
+                <span class="pause-icon"></span>
             </button>
-            <button id="adjust-btn" onclick="openAdjustPanel()"
-                class="flex-1 py-2.5 rounded-xl text-sm font-medium border">
-                調整
+
+            <!-- 右側：調整按鈕 -->
+            <button id="adjust-btn" onclick="openAdjustPanel()" class="secondary-btn" title="調整參數">
+                ⚙
             </button>
         </div>
     </div>
@@ -490,7 +623,6 @@
             document.getElementById('timer-screen').classList.remove('hidden');
 
             const pauseBtn = document.getElementById('pause-btn');
-            pauseBtn.textContent = "暫停";
             pauseBtn.classList.remove('is-paused');
 
             updateUI();
@@ -626,13 +758,21 @@
         function togglePause() {
             state.isPaused = !state.isPaused;
             const btn = document.getElementById('pause-btn');
-            btn.textContent = state.isPaused ? "繼續" : "暫停";
+            const pauseIcon = btn.querySelector('.pause-icon');
 
             if (state.isPaused) {
                 synth.cancel();
                 phaseDuration = state.timer;   // 剩餘秒數當作新的 duration
+                // 切換為播放圖示
+                pauseIcon.classList.add('play-icon');
+                pauseIcon.classList.remove('pause-icon');
+                pauseIcon.innerHTML = '';  // play-icon 用 border 繪製，不需要內容
             } else {
                 phaseStartTime = Date.now();     // 恢復：以現在為新起點
+                // 切換為暫停圖示
+                pauseIcon.classList.remove('play-icon');
+                pauseIcon.classList.add('pause-icon');
+                pauseIcon.innerHTML = '';  // pause-icon 用 ::before ::after 繪製
             }
 
             btn.classList.toggle('is-paused', state.isPaused);
