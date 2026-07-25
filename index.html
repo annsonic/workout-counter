@@ -189,6 +189,11 @@
             border-radius: 0.05rem;
         }
 
+        /* 隱藏暫停圖示，顯示播放圖示 */
+        .pause-icon.hidden {
+            display: none;
+        }
+
         /* 播放符號樣式：三角形 */
         .play-icon {
             display: inline-flex;
@@ -200,6 +205,10 @@
             border-top: 0.75rem solid transparent;
             border-bottom: 0.75rem solid transparent;
             margin-left: 0.3rem;
+        }
+
+        .play-icon.hidden {
+            display: none;
         }
 
         /* ── 次要按鈕（Secondary Controls）─ 重設與調整 ── */
@@ -397,6 +406,7 @@
             <!-- 中央：播放/暫停主按鈕 -->
             <button id="pause-btn" onclick="togglePause()" class="pause-play-icon" title="暫停/繼續">
                 <span class="pause-icon"></span>
+                <span class="play-icon hidden"></span>
             </button>
 
             <!-- 右側：調整按鈕 -->
@@ -759,20 +769,19 @@
             state.isPaused = !state.isPaused;
             const btn = document.getElementById('pause-btn');
             const pauseIcon = btn.querySelector('.pause-icon');
+            const playIcon = btn.querySelector('.play-icon');
 
             if (state.isPaused) {
                 synth.cancel();
                 phaseDuration = state.timer;   // 剩餘秒數當作新的 duration
-                // 切換為播放圖示
-                pauseIcon.classList.add('play-icon');
-                pauseIcon.classList.remove('pause-icon');
-                pauseIcon.innerHTML = '';  // play-icon 用 border 繪製，不需要內容
+                // 隱藏暫停圖示，顯示播放圖示
+                pauseIcon.classList.add('hidden');
+                playIcon.classList.remove('hidden');
             } else {
                 phaseStartTime = Date.now();     // 恢復：以現在為新起點
-                // 切換為暫停圖示
-                pauseIcon.classList.remove('play-icon');
-                pauseIcon.classList.add('pause-icon');
-                pauseIcon.innerHTML = '';  // pause-icon 用 ::before ::after 繪製
+                // 顯示暫停圖示，隱藏播放圖示
+                pauseIcon.classList.remove('hidden');
+                playIcon.classList.add('hidden');
             }
 
             btn.classList.toggle('is-paused', state.isPaused);
