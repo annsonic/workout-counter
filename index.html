@@ -433,18 +433,18 @@
         <!-- 下方控制區 ─ 媒體控制器佈局 -->
         <div class="media-control-container mb-8">
             <!-- 左側：重設按鈕 -->
-            <button id="reset-btn" onclick="resetApp()" class="secondary-btn" title="退出重來">
+            <button id="reset-btn" onclick="resetApp()" class="secondary-btn" title="退出重來" aria-label="退出重來">
                 ↻
             </button>
 
             <!-- 中央：播放/暫停主按鈕 -->
-            <button id="pause-btn" onclick="togglePause()" class="pause-play-icon" title="暫停/繼續">
+            <button id="pause-btn" onclick="togglePause()" class="pause-play-icon" title="暫停/繼續" aria-label="暫停或繼續">
                 <span class="pause-icon"></span>
                 <span class="play-icon hidden"></span>
             </button>
 
             <!-- 右側：調整按鈕 -->
-            <button id="adjust-btn" onclick="openAdjustPanel()" class="secondary-btn" title="調整參數"
+            <button id="adjust-btn" onclick="openAdjustPanel()" class="secondary-btn" title="調整參數" aria-label="調整參數"
                 data-tooltip="換人期間才允許調整設定">
                 ⚙
             </button>
@@ -530,6 +530,10 @@
         let finishTimeoutId = null;
         let phaseStartTime = null;   // Date.now() 的毫秒時間戳
         let phaseDuration = 0;      // 當前階段總秒數
+
+        // ── 新增：追蹤調整面板是否自動觸發暫停 ──────────────────────────
+        let pauseStateBeforeAdjust = false;  // 開啟 adjust panel 前的暫停狀態
+        let wasAutoToggled = false;         // adjust panel 是否自動調用了 togglePause
 
         const synth = window.speechSynthesis;
         let voices = [];
@@ -858,7 +862,13 @@
             document.getElementById('setup-screen').classList.remove('hidden');
             document.getElementById('timer-screen').classList.add('hidden');
             document.body.className = "screen-setup text-white min-h-screen flex flex-col items-center justify-center p-4";
+
+            // 重置調整面板相關狀態
+            wasAutoToggled = false;
+            pauseStateBeforeAdjust = false;
         }
+
+        // ─── 需求：調整面板暫停狀態管理 ──────────────────────────────────
 
         function openAdjustPanel() {
             // 只在 PREP 階段允許開啟調整面板
@@ -866,8 +876,16 @@
                 return;
             }
 
-            // 只有暫停時才能調整
-            if (!state.isPaused) togglePause();
+            // 記錄當前暫停狀態
+            pauseStateBeforeAdjust = state.isPaused;
+
+            // 只有暫停時才能調整，否則自動暫停
+            if (!state.isPaused) {
+                togglePause();
+                wasAutoToggled = true;  // 標記為自動觸發
+            } else {
+                wasAutoToggled = false; // 已經暫停，無需還原
+            }
 
             document.getElementById('adj-rounds').value = config.totalRounds;
             document.getElementById('adj-sets').value = config.setsPerRound;
@@ -878,6 +896,15 @@
 
         function closeAdjustPanel() {
             document.getElementById('adjust-panel').classList.add('hidden');
+
+            // 如果是自動觸發暫停，則還原到原本的暫停狀態
+            if (wasAutoToggled && pauseStateBeforeAdjust === false) {
+                // 原本未暫停，現在暫停了 → 恢復計時
+                togglePause();
+            }
+            // 重置標記
+            wasAutoToggled = false;
+            pauseStateBeforeAdjust = false;
         }
 
         function updateAdjPreview() {
@@ -945,8 +972,13 @@
                 return;
             }
 
-            // 若之前是暫停狀態，繼續計時
-            if (state.isPaused) togglePause();
+            // 若之前是暫停狀態（包括由 adjust panel 自動觸發的暫停），
+            // 現在自動恢復計時
+            // 注意：closeAdjustPanel 已經處理了自動暫停的還原
+            // 這裡只需確保套用後總是繼續計時
+            if (state.isPaused) {
+                togglePause();
+            }
         }
     </script>
 </body>
