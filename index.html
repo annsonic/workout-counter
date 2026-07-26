@@ -451,7 +451,7 @@
         </div>
     </div>
 
-    <!-- adjust-panel 結構對齐 setup-screen -->
+    <!-- adjust-panel 版面如同 setup-screen -->
     <div id="adjust-panel" class="hidden fixed inset-0 z-50
      text-white min-h-screen flex flex-col items-center justify-center p-4" style="background-color: var(--bg-base);">
 
@@ -715,6 +715,12 @@
 
             const pauseBtn = document.getElementById('pause-btn');
             pauseBtn.classList.remove('is-paused');
+
+            // ✅ 重置暫停/播放圖標的可見性
+            const pauseIcon = pauseBtn.querySelector('.pause-icon');
+            const playIcon = pauseBtn.querySelector('.play-icon');
+            pauseIcon.classList.remove('hidden');    // 顯示暫停圖標
+            playIcon.classList.add('hidden');        // 隱藏播放圖標
 
             updateUI();
             speak(getPrepPhrase(), 1.2);
