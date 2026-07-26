@@ -914,19 +914,36 @@
             const el = document.getElementById('adj-preview');
             if (!R || !S || !W) { el.textContent = '—'; return; }
 
-            // 已完成的 unit 數（目前 state 之前的部分）
+            // ── 已完成的 unit 數（用舊 config 計算）──────────────────────────────
             const doneUnits =
                 (state.currentRound - 1) * config.setsPerRound * 2 +
                 (state.currentSet - 1) * 2 +
                 (state.currentPlayer - 1);
 
+            // ── 用新規格計算總 units ──────────────────────────────────────────────
             const newTotalUnits = R * S * 2;
+
+            // 若目前進度超出新設定範圍，提示警告
             if (doneUnits >= newTotalUnits) {
                 el.textContent = '⚠️ 目前進度已超出新設定範圍，將直接結束訓練';
                 return;
             }
-            const remaining = (newTotalUnits - doneUnits) * (8 + W);
-            const min = (remaining / 60).toFixed(1);
+
+            // ── 計算「從現在起」剩餘的 units（用新規格） ──────────────────────────
+            // 從當前遊標(currentRound/currentSet/currentPlayer)起，用新R/S配置計算剩餘
+            const remainingUnitsFromNow = newTotalUnits - doneUnits;
+
+            // ── 計算剩餘秒數 ──────────────────────────────────────────────────────
+            // 當前 phase 的剩餘秒數（PREP 或 WORK）
+            const currentPhaseRemaining = state.timer;
+
+            // 剩餘 units 轉換為秒數（每個 unit = PREP + WORK）
+            const fullUnitsSeconds = (remainingUnitsFromNow - 1) * (8 + W);
+
+            // 總剩餘秒數 = 當前 phase 剩餘 + 剩餘 units 的秒數
+            const totalRemaining = currentPhaseRemaining + fullUnitsSeconds;
+
+            const min = (totalRemaining / 60).toFixed(1);
             el.textContent = `套用後剩餘時間約 ${min} 分鐘`;
         }
 
