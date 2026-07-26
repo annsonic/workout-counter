@@ -274,7 +274,7 @@
 
         #reset-btn {
             background-color: rgba(160, 80, 80, 0.15);
-            border-color: rgba(160, 80, 80, 0.35);
+            border-color: rgba(255, 255, 255, 0.20);
             color: rgba(255, 180, 180, 0.85);
         }
 
@@ -451,7 +451,7 @@
         </div>
     </div>
 
-    <!-- adjust-panel 結構對齊 setup-screen -->
+    <!-- adjust-panel 結構對齐 setup-screen -->
     <div id="adjust-panel" class="hidden fixed inset-0 z-50
      text-white min-h-screen flex flex-col items-center justify-center p-4" style="background-color: var(--bg-base);">
 
@@ -460,35 +460,58 @@
             <h1 class="text-3xl font-black text-center mb-6" style="color: var(--color-accent);">中途調整</h1>
 
             <div class="space-y-4">
-                <!-- 完全複用 setup-screen 的 grid 結構 -->
+                <!-- 動作項目 -->
                 <div class="grid grid-cols-12 items-center gap-3">
                     <label class="col-span-5 text-right text-sm font-semibold" style="color: var(--color-muted);">動作項目
                         (Rounds)</label>
                     <div class="col-span-7">
-                        <input type="number" id="adj-rounds" min="1" max="99" oninput="updateAdjPreview()"
+                        <input type="number" id="adj-rounds" min="1" max="99"
                             class="w-full border-none rounded-xl p-3 text-xl font-bold text-center outline-none"
-                            style="background-color: var(--bg-input); color: #e0e0e0;">
+                            style="background-color: var(--bg-input); color: #e0e0e0;"
+                            oninput="validateInput(this, 1, 99); updateAdjPreview()"
+                            onblur="clampInput(this, 1, 99); updateAdjPreview()">
                     </div>
                 </div>
+                <!-- 錯誤提示 -->
+                <div id="error-adj-rounds" class="grid grid-cols-12 gap-3 hidden">
+                    <div class="col-span-5"></div>
+                    <p class="col-span-7 text-xs mt-[-8px]" style="color:#c08080;">請輸入 1 ~ 99 的整數</p>
+                </div>
 
+                <!-- 單人循環 -->
                 <div class="grid grid-cols-12 items-center gap-3">
                     <label class="col-span-5 text-right text-sm font-semibold" style="color: var(--color-muted);">單人循環
                         (Sets)</label>
                     <div class="col-span-7">
-                        <input type="number" id="adj-sets" min="1" max="99" oninput="updateAdjPreview()"
+                        <input type="number" id="adj-sets" min="1" max="99"
                             class="w-full border-none rounded-xl p-3 text-xl font-bold text-center outline-none"
-                            style="background-color: var(--bg-input); color: #e0e0e0;">
+                            style="background-color: var(--bg-input); color: #e0e0e0;"
+                            oninput="validateInput(this, 1, 99); updateAdjPreview()"
+                            onblur="clampInput(this, 1, 99); updateAdjPreview()">
                     </div>
                 </div>
+                <!-- 錯誤提示 -->
+                <div id="error-adj-sets" class="grid grid-cols-12 gap-3 hidden">
+                    <div class="col-span-5"></div>
+                    <p class="col-span-7 text-xs mt-[-8px]" style="color:#c08080;">請輸入 1 ~ 99 的整數</p>
+                </div>
 
+                <!-- 運動時間 -->
                 <div class="grid grid-cols-12 items-center gap-3">
                     <label class="col-span-5 text-right text-sm font-semibold" style="color: var(--color-muted);">運動時間
                         (秒)</label>
                     <div class="col-span-7">
-                        <input type="number" id="adj-work" min="10" max="9999" oninput="updateAdjPreview()"
+                        <input type="number" id="adj-work" min="10" max="9999"
                             class="w-full border-none rounded-xl p-3 text-xl font-bold text-center outline-none"
-                            style="background-color: var(--bg-input); color: #e0e0e0;">
+                            style="background-color: var(--bg-input); color: #e0e0e0;"
+                            oninput="validateInput(this, 10, 9999); updateAdjPreview()"
+                            onblur="clampInput(this, 10, 9999); updateAdjPreview()">
                     </div>
+                </div>
+                <!-- 錯誤提示 -->
+                <div id="error-adj-work" class="grid grid-cols-12 gap-3 hidden">
+                    <div class="col-span-5"></div>
+                    <p class="col-span-7 text-xs mt-[-8px]" style="color:#c08080;">請輸入 10 ~ 9999 的整數</p>
                 </div>
             </div>
 
@@ -563,9 +586,19 @@
 
         function validateInput(input, min, max) {
             const val = parseInt(input.value);
-            const errorId = 'error-' + input.id.replace('input-', '');
+            const inputId = input.id;
+            let errorId;
+
+            // 根據 input id 決定對應的 error 元素 id
+            if (inputId.startsWith('input-')) {
+                errorId = 'error-' + inputId.replace('input-', '');
+            } else if (inputId.startsWith('adj-')) {
+                errorId = 'error-' + inputId;
+            }
+
             const errorEl = document.getElementById(errorId);
             const isInvalid = isNaN(val) || val < min || val > max;
+
             if (isInvalid) {
                 input.classList.add('input-error');
                 if (errorEl) errorEl.classList.remove('hidden');
@@ -581,7 +614,16 @@
             if (val > max) val = max;
             input.value = val;
             input.classList.remove('input-error');
-            const errorId = 'error-' + input.id.replace('input-', '');
+
+            const inputId = input.id;
+            let errorId;
+
+            if (inputId.startsWith('input-')) {
+                errorId = 'error-' + inputId.replace('input-', '');
+            } else if (inputId.startsWith('adj-')) {
+                errorId = 'error-' + inputId;
+            }
+
             const errorEl = document.getElementById(errorId);
             if (errorEl) errorEl.classList.add('hidden');
         }
@@ -952,7 +994,7 @@
             const newSets = parseInt(document.getElementById('adj-sets').value);
             const newWork = parseInt(document.getElementById('adj-work').value);
 
-            // 基本驗證
+            // 基本驗證（此時值已由 onblur 的 clampInput 修正）
             if (!newRounds || !newSets || !newWork) return;
 
             config.totalRounds = newRounds;
