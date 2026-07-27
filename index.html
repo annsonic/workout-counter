@@ -1003,44 +1003,58 @@
             // 基本驗證（此時值已由 onblur 的 clampInput 修正）
             if (!newRounds || !newSets || !newWork) return;
 
+            // ── 在套用前，計算目前已完成的 units（用舊 config）──────────────────
+            const doneUnits =
+                (state.currentRound - 1) * config.setsPerRound * 2 +
+                (state.currentSet - 1) * 2 +
+                (state.currentPlayer - 1);
+
+            // ── 計算新設定下的總 units ────────────────────────────────────────
+            const newTotalUnits = newRounds * newSets * 2;
+
+            // ── 檢查是否已超出新設定範圍 ────────────────────────────────────────
+            let needFinish = false;
+            if (doneUnits >= newTotalUnits) {
+                // 已完成的 units 數已等於或超過新設定的總數 → 直接結束
+                needFinish = true;
+            }
+
+            // ── 套用新設定 ──────────────────────────────────────────────────────
             config.totalRounds = newRounds;
             config.setsPerRound = newSets;
             config.workTime = newWork;
 
-            // ── clamp state 游標 ──────────────────────────────────────────
-            let needFinish = false;
-
-            if (state.currentRound > config.totalRounds) {
-                // 已超出最大 Round → 直接結束
-                needFinish = true;
-            } else if (state.currentSet > config.setsPerRound) {
-                // 目前 Set 越界 → 跳到該 Round 最後一位的 WORK 尾端
-                state.currentSet = config.setsPerRound;
-                state.currentPlayer = 2;
-                // 讓下一個 tick 自然推進到 finishTraining 或下一 Round
-                // 把目前 phase 設為 PREP 剩 1 秒，讓它很快過去
-                state.phase = 'PREP';
-                state.timer = 1;
-                phaseDuration = 1;
-                phaseStartTime = Date.now() - 0;  // 讓 tick 立刻觸發
+            // ── 如果不需要結束，檢查並修正游標範圍 ──────────────────────────────
+            if (!needFinish) {
+                if (state.currentRound > config.totalRounds) {
+                    // 目前 Round 越界 → 結束訓練
+                    needFinish = true;
+                } else if (state.currentSet > config.setsPerRound) {
+                    // 目前 Set 越界 → 跳到該 Round 的最後一位
+                    state.currentSet = config.setsPerRound;
+                    state.currentPlayer = 2;
+                    // 把目前 phase 設為 PREP 剩 1 秒，讓它很快過去並推進到下一狀態
+                    state.phase = 'PREP';
+                    state.timer = 1;
+                    phaseDuration = 1;
+                    phaseStartTime = Date.now();
+                }
             }
-            // workTime 改動：下一個 WORK phase 開始時自動讀新值，不需額外處理
 
-            closeAdjustPanel();
-
-            // ── 立即重繪進度條（config 已更新，totalRounds 可能已改變） ──
+            // ── 立即重繪進度條（config 已更新，totalRounds 可能已改變） ──────────
             initProgressBar();
             updateUI();
+
+            closeAdjustPanel();
 
             if (needFinish) {
                 finishTraining();
                 return;
             }
 
-            // 若之前是暫停狀態（包括由 adjust panel 自動觸發的暫停），
-            // 現在自動恢復計時
-            // 注意：closeAdjustPanel 已經處理了自動暫停的還原
-            // 這裡只需確保套用後總是繼續計時
+            // ── 若之前是暫停狀態，現在自動恢復計時 ──────────────────────────────
+            // closeAdjustPanel 已經處理了自動暫停的還原
+            // 這裡只需確保套用後若當前是暫停狀態就恢復計時
             if (state.isPaused) {
                 togglePause();
             }
