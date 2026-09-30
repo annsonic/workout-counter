@@ -722,6 +722,7 @@
             }
             const errorEl = document.getElementById(errorId);
             const isInvalid = isNaN(val) || val < min || val > max;
+
             if (isInvalid) {
                 input.classList.add('input-error');
                 if (errorEl) errorEl.classList.remove('hidden');
