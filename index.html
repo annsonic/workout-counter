@@ -646,8 +646,12 @@
         let config = {
             totalRounds: 0,
             setsPerRound: 0,
-            prepTime: 8,
-            switchPlayerPrepTime: 8,
+            // 訓練最開始（round==1 && set==1 && player==1）的準備時間。學員已就位，等教練按下開始鍵
+            initialPrepTime: 8,
+            // 同一個 round 內換人 / 換 set 的準備時間（同器材）
+            switchPlayerPrepTime: 20,
+            // 換 round（換動作 / 換器材）的準備時間
+            switchStationPrepTime: 25,
             workTime: 0
         };
         let state = {
@@ -689,6 +693,22 @@
             setTimeout(warmUpSpeechSynthesis, 500);
         });
 
+        // ─── 預備時間規則 ────────────────────────────────────────────────
+
+        // 依 round/set/player 決定該用哪一種預備時間：
+        // 1. 訓練開局（round1/set1/player1）→ initialPrepTime
+        // 2. 換 round 開頭（set=1, player=1，非開局）→ switchStationPrepTime（換動作/器材）
+        // 3. 其餘（同 round 內換人 / 換 set）→ switchPlayerPrepTime
+        function getPrepDurationFor(round, set, player) {
+            if (round === 1 && set === 1 && player === 1) {
+                return config.initialPrepTime;
+            }
+            if (set === 1 && player === 1) {
+                return config.switchStationPrepTime;
+            }
+            return config.switchPlayerPrepTime;
+        }
+
         // ─── 輸入驗證 ───────────────────────────────────────────────────
 
         function validateInput(input, min, max) {
@@ -728,17 +748,55 @@
             if (errorEl) errorEl.classList.add('hidden');
         }
 
+        // 逐一模擬未來每個 unit（set-player）該用哪種預備時間，加總估算秒數。
+        // fromRound/fromSet/fromPlayer 為目前所在的 unit；currentPhaseRemaining 為目前 phase 剩餘秒數。
+        function estimateRemainingSeconds(R, S, W, fromRound, fromSet, fromPlayer, currentPhaseRemaining) {
+            let total = currentPhaseRemaining;
+            let r = fromRound, s = fromSet, p = fromPlayer;
+            let first = true;
+
+            while (true) {
+                if (!first) {
+                    const prep = getPrepDurationFor(r, s, p);
+                    total += prep;
+                }
+                total += W;
+                first = false;
+
+                if (p === 1) {
+                    p = 2;
+                } else if (s < S) {
+                    s++; p = 1;
+                } else if (r < R) {
+                    r++; s = 1; p = 1;
+                } else {
+                    break;
+                }
+            }
+            return total;
+        }
+
         function updateTotalTime() {
             const rounds = parseInt(document.getElementById('input-rounds').value) || 0;
             const sets = parseInt(document.getElementById('input-sets').value) || 0;
             const workTime = parseInt(document.getElementById('input-work').value) || 0;
-            const prepTime = 8;
-            const totalSeconds = (prepTime + workTime) * 2 * sets * rounds;
             const label = document.getElementById('total-time-label');
+
             if (rounds === 0 || sets === 0 || workTime === 0) {
                 label.textContent = '總訓練時間：—';
                 return;
             }
+
+            let totalSeconds = 0;
+            for (let r = 1; r <= rounds; r++) {
+                for (let s = 1; s <= sets; s++) {
+                    for (let p = 1; p <= 2; p++) {
+                        const prep = getPrepDurationFor(r, s, p);
+                        totalSeconds += prep + workTime;
+                    }
+                }
+            }
+
             if (totalSeconds <= 60) {
                 label.textContent = `總訓練時間：約 ${totalSeconds} 秒`;
             } else {
@@ -799,11 +857,11 @@
             state.currentSet = 1;
             state.currentPlayer = 1;
             state.phase = 'PREP';
-            state.timer = config.prepTime;
+            state.timer = config.initialPrepTime;
             state.isPaused = false;
             state.isFinished = false;
 
-            phaseDuration = config.prepTime;
+            phaseDuration = config.initialPrepTime;
             phaseStartTime = Date.now();
 
             initProgressBar();
@@ -874,23 +932,33 @@
                 speak("開始", 1.2);
             } else {
                 let transitionPrompt = "換人";
+                let nextRound = state.currentRound;
+                let nextSet = state.currentSet;
+                let nextPlayer = state.currentPlayer;
+
                 if (state.currentPlayer === 1) {
-                    state.currentPlayer = 2;
+                    nextPlayer = 2;
                 } else if (state.currentSet < config.setsPerRound) {
-                    state.currentSet++;
-                    state.currentPlayer = 1;
+                    nextSet = state.currentSet + 1;
+                    nextPlayer = 1;
                 } else if (state.currentRound < config.totalRounds) {
-                    state.currentRound++;
-                    state.currentSet = 1;
-                    state.currentPlayer = 1;
+                    nextRound = state.currentRound + 1;
+                    nextSet = 1;
+                    nextPlayer = 1;
                     transitionPrompt = "下一個動作";
                 } else {
                     finishTraining();
                     return;
                 }
+
+                state.currentRound = nextRound;
+                state.currentSet = nextSet;
+                state.currentPlayer = nextPlayer;
                 state.phase = 'PREP';
-                state.timer = config.prepTime;
-                phaseDuration = config.prepTime;
+
+                const nextPrep = getPrepDurationFor(nextRound, nextSet, nextPlayer);
+                state.timer = nextPrep;
+                phaseDuration = nextPrep;
                 phaseStartTime = Date.now();
                 speak(transitionPrompt, 1.2);
             }
@@ -1090,7 +1158,7 @@
             pauseStateBeforeAdjust = false;
         }
 
-        // ── 對齊 Dart _updatePreview：改用 switchPlayerPrepTime，且文字加註「（估算）」 ──
+        // ── 對齊 Dart _updatePreview：依實際換人/換 round 預備時間逐步估算，文字加註「（估算）」 ──
         function updateAdjPreview() {
             const R = parseInt(document.getElementById('adj-rounds').value) || 0;
             const S = parseInt(document.getElementById('adj-sets').value) || 0;
@@ -1118,11 +1186,11 @@
 
             el.classList.remove('warning');
 
-            const remainingUnitsFromNow = newTotalUnits - doneUnits;
-            const currentPhaseRemaining = state.timer;
-            const fullUnitsSeconds =
-                (remainingUnitsFromNow - 1) * (config.switchPlayerPrepTime + W);
-            const totalRemaining = currentPhaseRemaining + fullUnitsSeconds;
+            const totalRemaining = estimateRemainingSeconds(
+                R, S, W,
+                state.currentRound, state.currentSet, state.currentPlayer,
+                state.timer
+            );
 
             const min = (totalRemaining / 60).toFixed(1);
             el.textContent = `套用後剩餘時間約 ${min} 分鐘（估算）`;
@@ -1162,8 +1230,9 @@
                     state.currentSet = config.setsPerRound;
                     state.currentPlayer = 2;
                     state.phase = 'PREP';
-                    state.timer = 1;
-                    phaseDuration = 1;
+                    const prep = getPrepDurationFor(state.currentRound, state.currentSet, state.currentPlayer);
+                    state.timer = prep;
+                    phaseDuration = prep;
                     phaseStartTime = Date.now();
                 }
             }
